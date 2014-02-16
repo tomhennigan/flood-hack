@@ -23,7 +23,7 @@ _VOLUNTEER_LATLONG_PARSER = re.compile(r'latLng:\[([0-9.\-]+),([0-9.\-]+)\],')
 # Define some structs
 class Point(namedtuple('Point', ['lat', 'lng', 'volunteer_id'])):
     def __new__(cls, lat, lng, volunteer_id=None):
-        return super(Point, cls).__new__(lat, lng, volunteer_id)
+        return super(Point, cls).__new__(cls, lat, lng, volunteer_id)
 
 
 def scrape_volunteer_points(map_page_url, cache_db="/tmp/flood-volunteers.db"):
