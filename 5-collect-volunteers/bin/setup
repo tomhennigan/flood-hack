@@ -22,6 +22,7 @@ BASEDIR=$(dirname $0)/..
 if [ ! -f "$BASEDIR/bin/env/updated" -o $BASEDIR/requirements.pip -nt $BASEDIR/bin/env/updated ]; then
   virtualenv $BASEDIR/bin/env -p python2.7
   $BASEDIR/bin/env/bin/pip install -U distribute==0.6.46
+  $BASEDIR/bin/env/bin/pip install -U ez_setup
   $BASEDIR/bin/env/bin/pip install -r $BASEDIR/requirements.pip
   if [ $? -ne 0 ]; then
     echo "There was a problem installing requirements. Aborting."
