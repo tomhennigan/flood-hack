@@ -5,7 +5,7 @@
 # | (_| (_) | | |  __/ (__| ||_____\ V / (_) | | |_| | | | | ||  __/  __/ |  \__ \
 #  \___\___/|_|_|\___|\___|\__|     \_/ \___/|_|\__,_|_| |_|\__\___|\___|_|  |___/
 #
-#  CLI tool for scraping FloodVolunteers.co.uk and extracing their details
+# CLI tool for scraping FloodVolunteers.co.uk and extracing their details
 #
 
 import argparse
@@ -19,7 +19,9 @@ def main(args):
 
     url = "http://floodvolunteers.co.uk/"
     points = scrape_volunteer_points(map_page_url=url)
-    pprint(points)
+
+    for point in points:
+        pprint(point)
 
 
 def parse_args():
