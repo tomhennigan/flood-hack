@@ -27,6 +27,17 @@ def scrape_volunteer_points(map_page_url, cache_db="/tmp/flood-volunteers.db"):
     """Scrape the map points from the FloodVolunteers home page. This method
     returns a generator of Volunteer objects."""
 
+    r = requests.get(map_page_url)
+    status = r.status_code
+    if status != 200:
+        raise Exception("Failed to load map page with status %r" % status)
+
+    # Find the max volunteer
+    max_volunteer_id = None
+    for match in _VOLUNTEER_MAP_LATLONG_PARSER.finditer(r.text):
+        lat, lng, volunteer_id = match.groups()
+        max_volunteer_id = max(max_volunteer_id, int(volunteer_id))
+
     # Open the cache database if there is one
     cache = None
     last_volunteer = None
@@ -41,17 +52,6 @@ def scrape_volunteer_points(map_page_url, cache_db="/tmp/flood-volunteers.db"):
             pass
         else:
             last_volunteer = int(max(map(int, itertools.chain([last_volunteer], keys))))
-
-    r = requests.get(map_page_url)
-    status = r.status_code
-    if status != 200:
-        raise Exception("Failed to load map page with status %r" % status)
-
-    # Find the max volunteer
-    max_volunteer_id = None
-    for match in _VOLUNTEER_MAP_LATLONG_PARSER.finditer(r.text):
-        lat, lng, volunteer_id = match.groups()
-        max_volunteer_id = max(max_volunteer_id, int(volunteer_id))
 
     # Yield all the cached volunteers
     for key, value in cache.RangeIter(key_to=str(max_volunteer_id)):
