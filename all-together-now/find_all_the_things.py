@@ -1,42 +1,16 @@
 from twitterClient import Client
 from urllib import urlencode
-import argparse
 import json
 import requests
 from volunteers import get_volunteers, points_within_distance, Point
 import os.path
 
-
-class Severity:
-    SEVERE_WARNING = 1
-    WARNING = 2
-    ALERT = 3
-    WARNING_NO_LONGER_IN_FORCE = 4
-    MONITORED_LOCATION = 5
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--donut-inner-distance', type=int, default=8)
-parser.add_argument('--donut-outer-distance', type=int, default=10)
-parser.add_argument('--flood-warning-severity', type=int, default=Severity.SEVERE_WARNING)
-
-parser.add_argument('--twitter-query', type=str, default='')
-parser.add_argument('--twitter-consumer-key', type=str, required=True)
-parser.add_argument('--twitter-consumer-secret', type=str, required=True)
-
-cli_args = parser.parse_args()
-
-
-def _shoothill_api_floods():
-    """Nasty hacks to access the shoothill API.
-
-    :returns: a list of areas affected by flooding.
-    """
-
-    r = requests.get(
-        'http://dbec32afb59243e0a83d0216b56eccce.cloudapp.net/api/Floods',
-    )
-
-    return r.json()
+# Severities.
+SEVERE_WARNING = 1
+WARNING = 2
+ALERT = 3
+WARNING_NO_LONGER_IN_FORCE = 4
+MONITORED_LOCATION = 5
 
 
 def get_flood_warning_locations(severity=None):
@@ -50,33 +24,30 @@ def get_flood_warning_locations(severity=None):
     # with open('shoothill_floods.json', 'r') as fp:
     #     areas = json.load(fp)
 
-    areas = _shoothill_api_floods()
+    r = requests.get(
+        'http://dbec32afb59243e0a83d0216b56eccce.cloudapp.net/api/Floods',
+    )
+
+    areas = r.json()
 
     for area in areas:
         if severity is None or area['Severity'] == severity:
             yield (area['Center']['Latitude'], area['Center']['Longitude'])
 
 
-
-
-#location = Location(consumer_key, consumer_secret)
-
-def get_user_name_near_lat_long(lat, lon, radius):
-    client = Client(
-        cli_args.twitter_consumer_key,
-        cli_args.twitter_consumer_secret
-    )
+def _get_twitter_usernames_inside(consumer_key, consumer_secret, lat, lon, radius):
+    client = Client(consumer_key, consumer_secret)
 
     seen_screen_names = set()
 
     lat = '%.10f' % lat
     lon = '%.10f' % lon
-    # radius = '%.10f' % radius
 
     params = {
         'count': '10000',
         'q': cli_args.twitter_query,
-        'geocode': ','.join([lat, lon, radius])
+        'geocode': ','.join([lat, lon, radius]),
+        'result_type': 'recent',
     }
 
     url = 'https://api.twitter.com/1.1/search/tweets.json?' + urlencode(params.items())
@@ -100,30 +71,82 @@ def get_user_name_near_lat_long(lat, lon, radius):
         lon = status['geo']['coordinates'][1]
         yield screen_name, (lat, lon)
 
-def get_twitter_users(locations):
-
-    if os.path.exists('twitter_users.json'):
-        with open('twitter_users.json', 'r') as fp:
-            for line in fp:
-                yield json.loads(line)
-        return
-
+def get_twitter_users(consumer_key, consumer_secret, radius_miles, locations):
     seen_usernames = set()
 
     for search_lat, search_lng in locations:
-        distance = '%dmi' % (cli_args.donut_outer_distance)
+        distance = '%dmi' % (radius_miles)
 
-        for username, (lat, lng) in get_user_name_near_lat_long(search_lat, search_lng, distance):
+        twitter_users = _get_twitter_usernames_inside(
+            consumer_key,
+            consumer_secret,
+            search_lat,
+            search_lng,
+            distance
+        )
+
+        for username, (lat, lng) in twitter_users:
             if username in seen_usernames:
                 continue
+            else:
+                seen_usernames.add(username)
 
-            seen_usernames.add(username)
             yield username, (lat, lng)
 
+if __name__ == '__main__':
+    import argparse
 
-volunteers = get_volunteers()
-locations = get_flood_warning_locations(severity=cli_args.flood_warning_severity)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--volunteer-distance', type=int, default=15000)
+    parser.add_argument('--donut-inner-distance', type=int, default=8)  # Currently not used.
+    parser.add_argument('--donut-outer-distance', type=int, default=10)
+    parser.add_argument('--flood-warning-severe', action='store_true', default=True)
+    parser.add_argument('--flood-warning-warning', action='store_true')
+    parser.add_argument('--flood-warning-alert', action='store_true')
+    parser.add_argument('--no-flood-warning-severe', dest='flood_warning_severe', action='store_false')
+    parser.add_argument('--no-flood-warning-warning', dest='flood_warning_warning', action='store_false')
+    parser.add_argument('--no-flood-warning-alert', dest='flood_warning_alert', action='store_false')
+    parser.add_argument('--twitter-query', type=str, default='')
+    parser.add_argument('--twitter-consumer-key', type=str, required=True)
+    parser.add_argument('--twitter-consumer-secret', type=str, required=True)
 
-for twitter_user, (twitter_user_lat, twitter_user_lng) in get_twitter_users(locations):
-    print twitter_user, (twitter_user_lat, twitter_user_lng)
+    cli_args = parser.parse_args()
 
+    # Figure out requested severities.
+    severities = []
+    if cli_args.flood_warning_severe:
+        severities.append(SEVERE_WARNING)
+
+    if cli_args.flood_warning_warning:
+        severities.append(WARNING)
+
+    if cli_args.flood_warning_alert:
+        severities.append(ALERT)
+
+    # So we don't spam people.
+    seen_twitter_users = set()
+
+    for severity in severities:
+        volunteers = list(get_volunteers())
+        locations = get_flood_warning_locations(severity=severity)
+
+        users = get_twitter_users(
+            cli_args.twitter_consumer_key,
+            cli_args.twitter_consumer_secret,
+            cli_args.donut_outer_distance,
+            locations
+        )
+
+        for twitter_user, (twitter_user_lat, twitter_user_lng) in users:
+            if twitter_user in seen_twitter_users:
+                continue
+            else:
+                seen_twitter_users.add(twitter_user)
+
+            local_volunteers = points_within_distance(
+                Point(lat=twitter_user_lat, lng=twitter_user_lng),
+                volunteers,
+                cli_args.volunteer_distance
+            )
+            num_volunteers = sum(1 for _ in local_volunteers)
+            print "%s\t%d\t%d" % (twitter_user, severity, num_volunteers)
