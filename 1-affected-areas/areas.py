@@ -16,12 +16,8 @@ def _shoothill_api_floods():
     :returns: a list of areas affected by flooding.
     """
 
-    ASPXAUTH = 'EE3F15872589517DFFD89C1767C70BDC389EFE72786842F7D4690E7CC9D4E35B6D2E0FB139726A36714A0A1C4B7074DFB5BB4C2B06080E8F170E333E89E7DFC8DAF8D152B941986AE4D2FC579FE0A41056BA9B72C9E70C3E01CF47E54E33693FCD9A282DFE22A4477571D42AC6156AF0645C0F72'
     r = requests.get(
-        'http://apifa.shoothill.com/api/Floods',
-        headers={
-            'Cookie': 'cc_cookie_accept=cc_cookie_accept; .ASPXAUTH=%s;' % ASPXAUTH
-        }
+        'http://dbec32afb59243e0a83d0216b56eccce.cloudapp.net/api/Floods',
     )
 
     return r.json()
