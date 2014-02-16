@@ -11,7 +11,7 @@
 import itertools
 import leveldb
 import requests
-import re2 as re
+import re
 from collections import namedtuple
 
 
