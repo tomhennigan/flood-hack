@@ -23,10 +23,10 @@ sort -k2n -k3nr -k1 users.txt | cut -f1 -f3 > users_sorted.txt
 You need:
 
 * Twitter API Details
-* Three files in pusher/input/:
-    * users.txt: Tab separated txt file containing a list of twitter usernames and nearby victim counts
-    * messages.txt: A txt file listing messages templates with two "%s" for replacing with twitter username and victim counts
-    * blacklist.txt: Users you don't want to send to. Successfully sent messages will have usernames added here.
+* Three files in `pusher/input/`:
+    * `users.txt`: Tab separated txt file containing a list of twitter usernames and nearby volunteer counts.
+    * `messages.txt`: A txt file listing messages templates with two "%s" for replacing with twitter username and volunteer counts.
+    * `blacklist.txt`: Users you don't want to send to. Successfully sent messages will have usernames added here.
 
 ```bash
 ./run.sh \
