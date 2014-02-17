@@ -1,10 +1,3 @@
-# Write docs
-# Write install script
-# Add some extra messages of varying lengths
-# Add gitignore for venv
-# Push branch / merge master
-# Start script running on linode
-
 import twitter
 import time
 import argparse
@@ -15,11 +8,12 @@ from random import choice
 
 parser = argparse.ArgumentParser(description='Twitter Poster')
 
-parser.add_argument('-ck', '--consumer_key', help='Consumer Key', default="")
-parser.add_argument('-cs', '--consumer_secret', help='Consumer Secret', default="")
-parser.add_argument('-ak', '--access_token_key', help='Access Token Key', default="")
-parser.add_argument('-as', '--access_token_secret', help='Access Token Secret', default="")
-parser.add_argument('-st', '--sleep_time', help='How long to wait between tweets (seconds)', default="")
+parser.add_argument('--consumer_key', help='Consumer Key', default="", required=True)
+parser.add_argument('--consumer_secret', help='Consumer Secret', default="", required=True)
+parser.add_argument('--access_token_key', help='Access Token Key', default="", required=True)
+parser.add_argument('--access_token_secret', help='Access Token Secret', default="", required=True)
+parser.add_argument('--sleep_time', help='How long to wait between tweets (seconds)', default="", required=True, type=int)
+parser.add_argument('--dry_run', help='Print the tweets instead of actually sending them. Blacklist is still written!', default=False)
 
 args = parser.parse_args()
 
@@ -35,7 +29,7 @@ users_blacklist = open("input/blacklist.txt", "r").readlines()
 message_templates = open("input/messages.txt").readlines()
 
 
-def tweet(message, log):
+def tweet(message, log, dry_run):
     api = twitter.Api(
         consumer_key=args.consumer_key,
         consumer_secret=args.consumer_secret,
@@ -44,7 +38,12 @@ def tweet(message, log):
     )
 
     try:
-        response = api.PostUpdates(message)
+        if dry_run:
+            log.debug("DRY RUN!")
+            response = message
+            log.debug(message)
+        else:
+            response = api.PostUpdates(message)
     except Exception, e:
         log.error("FAIL: Unable to send tweet \"%s\" : %s" % (message, e))
         response = False
@@ -55,6 +54,11 @@ def format_user(ts_user):
     return ts_user.split('\t')
 
 def format_message(message_templates, user, count, retry_counter=0):
+    """
+    Pick a message from the message pool at random.
+    If the message is over the max twitter message length, recursively try again 10 times
+    before giving up.
+    """
     message = choice(message_templates).split('\n')[0] % (user, count)
 
     if len(message) > 140:
@@ -89,7 +93,7 @@ for user in users_to_send:
         message = format_message(message_templates, user_and_count[0], user_and_count[1])
 
         if message:
-            tweet_response = tweet(message, log)
+            tweet_response = tweet(message, log, args.dry_run)
 
             if tweet_response:
                 if not add_blacklist(user_and_count[0], log):
@@ -102,6 +106,7 @@ for user in users_to_send:
             log.warning("SKIPPING %s: %s - Message too long and too many retries." % (user_and_count[0], message))
     else:
         log.warning("SKIPPING %s: Blacklist hit." % user_and_count[0])
+log.warning("End of input")
 
 
 
