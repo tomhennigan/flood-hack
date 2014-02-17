@@ -5,8 +5,8 @@ FludBudUK
 
 ```bash
 python find_users_to_target.py \
-	--twitter-consumer-key=$key \
-	--twitter-consumer-secret=$secret \
+	--twitter-consumer-key=$consumer_key \
+	--twitter-consumer-secret=$consumer_secret \
 	--flood-warning-severe \
 	--flood-warning-warning \
 	--flood-warning-alert > users.txt
