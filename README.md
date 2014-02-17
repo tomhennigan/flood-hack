@@ -5,7 +5,8 @@ FludBudUK
 
 ```bash
 python find_users_to_target.py \
-	--twitter-consumer-key $key --twitter-consumer-secret $secret \
+	--twitter-consumer-key $key \
+	--twitter-consumer-secret $secret \
 	--flood-warning-severe \
 	--flood-warning-warning \
 	--flood-warning-alert > users.txt
@@ -27,7 +28,12 @@ You need:
     * messages.txt: A txt file listing messages templates with two "%s" for replacing with twitter username and victim counts
     * blacklist.txt: Users you don't want to send to. Successfully sent messages will have usernames added here.
 
-```
-./run.sh --consumer_key= --consumer_secret= --access_token_key= --access_token_secret= --sleep_time=60 [--dry_run=true]
-
+```bash
+./run.sh \
+	--consumer_key=$consumer_key \
+	--consumer_secret=$consumer_secret \
+	--access_token_key=$access_key \
+	--access_token_secret=$access_secret \
+	--sleep_time=60 \
+	[--dry_run=true]
 ```
